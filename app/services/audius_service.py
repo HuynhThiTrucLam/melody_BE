@@ -1,4 +1,5 @@
-from app.api.audius import get_audius_data
+from api.audius import get_audius_data
+
 
 async def get_track_details(track_id: str):
     """Business logic to fetch track details and return useful data."""
