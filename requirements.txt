@@ -13,3 +13,5 @@ google-api-python-client
 black
 passlib
 bcrypt
+aiosmtplib
+email-validator

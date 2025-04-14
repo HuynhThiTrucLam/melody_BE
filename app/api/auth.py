@@ -1,10 +1,18 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from datetime import datetime
-from core import security, config
+from models.verification import SendCodeRequest, VerifyCodeRequest
+from core import security
 from models.user import UserCreate, UserLogin
-from services.user_service import create_user, get_user_by_username, authenticate_user
+from services.user_service import (
+    create_user,
+    get_user_by_username,
+    authenticate_user,
+)
+from services.verification_service import (
+    send_verification_code as send_code,
+    verify_verification_code as verify_code,
+)
 from core.config import logger
 
 router = APIRouter()
@@ -69,3 +77,22 @@ async def login(login_data: UserLogin):
         "token_type": "bearer",
         "is_new": user.get("is_new", False),
     }
+
+
+@router.post("/auth/logout")
+async def logout(user_id: int):
+    # await delete_user_session(user_id)
+    return {"message": "Logged out successfully"}
+
+
+@router.post("/send_verification_code")
+async def send_verification_code(req: SendCodeRequest):
+    logger.info(f"Sending verification code to {req.email} for {req.purpose}")
+    result = await send_code(req.email, req.purpose)
+    return result
+
+
+@router.post("/verify_verification_code")
+async def verify_verification_code(req: VerifyCodeRequest):
+    result = await verify_code(req.email, req.code)
+    return result

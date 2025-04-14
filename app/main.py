@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api import audius
 from api import google_auth
 from api import auth
-
+from api import music
 
 app = FastAPI()
 app.add_middleware(
@@ -16,3 +16,4 @@ app.add_middleware(
 app.include_router(audius.router, prefix="/api/v1")
 app.include_router(google_auth.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(music.router, prefix="/api/v1")
