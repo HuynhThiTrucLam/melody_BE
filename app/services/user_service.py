@@ -1,8 +1,10 @@
+from bson import ObjectId
 from db.mongo import users_collection
-from models.user import User, UserCreate
+from models.user import User, UserCreate, UserUpdate
 from core import security
 from datetime import datetime
 from typing import Optional, Dict, Any
+from core.config import logger
 
 
 async def get_or_create_user(idinfo: dict) -> Dict[str, Any]:
@@ -23,14 +25,14 @@ async def get_or_create_user(idinfo: dict) -> Dict[str, Any]:
     return user
 
 
-async def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
+async def get_user_by_username(username: str) -> Optional[User]:
     user = await users_collection.find_one({"username": username})
     if user:
         user["_id"] = str(user["_id"])
-    return user
+    return User(**user)
 
 
-async def create_user(user_data: UserCreate) -> Dict[str, Any]:
+async def create_user(user_data: UserCreate) -> User:
     hashed_password = security.get_hash_code(user_data.password)
 
     user = User(
@@ -47,13 +49,26 @@ async def create_user(user_data: UserCreate) -> Dict[str, Any]:
     created_user["_id"] = str(created_user["_id"])
     created_user["is_new"] = True
 
-    return created_user
+    return User(**created_user)
 
 
-async def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
+async def authenticate_user(username: str, password: str) -> Optional[User]:
     user = await get_user_by_username(username)
     if not user:
         return None
-    if not security.verify_hashed_code(password, user.get("hashed_password")):
+    if not security.verify_hashed_code(password, user.hashed_password):
         return None
     return user
+
+
+async def update_user_by_id(user_id: ObjectId, user_data: UserUpdate) -> Optional[User]:
+    user = await users_collection.find_one({"_id": user_id})
+    logger.info(f"user: {user}")
+    if not user:
+        return None
+    for key, value in user_data.model_dump().items():
+        if value is not None:
+            user[key] = value
+    user["updated_at"] = datetime.now()
+    await users_collection.update_one({"_id": user_id}, {"$set": user})
+    return User(**user)

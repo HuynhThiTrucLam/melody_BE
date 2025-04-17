@@ -1,29 +1,46 @@
-from fastapi import APIRouter, HTTPException
-from models.tracks import TrackSearch, TopTrendingTracks
+from fastapi import APIRouter, HTTPException, Depends, Query
+from models.tracks import Country, Period, TrackSearch, TopTrendingTracks
 from services.music_service import search_music_handler, top_trending_tracks_handler
+from models.user import UserRole
+from api.deps import validate_role
 
 
 router = APIRouter(tags=["music"], prefix="/music")
 
 
-@router.get("/")
+@router.get(
+    "/",
+    dependencies=[Depends(validate_role([UserRole.user, UserRole.admin]))],
+)
 async def get_music():
     return {"message": "Hello, World!"}
 
 
 # Search for music
-@router.post("/search")
-async def search_music(data: TrackSearch):
-    if not data.query.strip():
+@router.get(
+    "/search",
+    dependencies=[
+        Depends(validate_role([UserRole.admin, UserRole.user, UserRole.artist]))
+    ],
+)
+async def search_music(query: str = Query(..., description="Search query"), limit: int = Query(10, description="Limit of results"), offset: int = Query(0, description="Offset of results")):
+    if not query.strip():
         raise HTTPException(status_code=400, detail="Query is required")
 
+    data = TrackSearch(query=query, limit=limit, offset=offset)
     return await search_music_handler(data)
 
 
 # Top 200 tracks
-@router.post("/top-trending")
-async def top_trending_tracks(data: TopTrendingTracks):
-    if not data.country.strip():
+@router.get(
+    "/top-trending",
+    dependencies=[
+        Depends(validate_role([UserRole.admin, UserRole.user, UserRole.artist]))
+    ],
+)
+async def top_trending_tracks(country: Country = Query(..., description="Country"), period: Period = Query(..., description="Period")):
+    if not country.strip():
         raise HTTPException(status_code=400, detail="Country is required")
 
+    data = TopTrendingTracks(country=country, period=period)
     return await top_trending_tracks_handler(data)
