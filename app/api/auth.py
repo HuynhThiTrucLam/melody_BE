@@ -89,9 +89,7 @@ async def update_user(user_id: str, user_data: UserUpdate):
     try:
         user = await update_user_by_id(ObjectId(user_id), user_data)
         return user
-    except AttributeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID"
-        )
+    except AttributeError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

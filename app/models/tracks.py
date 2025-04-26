@@ -42,6 +42,9 @@ class TrackList(BaseModel):
     items: Optional[List[TrackItem]] = None
     pagingInfo: Optional[PagingInfo] = None
 
+    def model_dump(self) -> Dict[str, Any]:
+        return self.dict(exclude_none=True)
+
 
 class TracksResponse(BaseModel):
     tracks: Optional[TrackList] = None
@@ -189,3 +192,66 @@ class TrendingTrack(BaseModel):
 
 class TrendingTracksResponse(BaseModel):
     tracks: List[TrendingTrack]
+
+    def model_dump(self) -> Dict[str, Any]:
+        return self.dict(exclude_none=True)
+
+
+class DownloadTrackData(BaseModel):
+    id: str
+    artist: str
+    title: str
+    album: str
+    cover: str
+    releaseDate: str
+    downloadLink: str
+
+
+class DownloadTrackResponse(BaseModel):
+    success: bool
+    data: DownloadTrackData
+    generatedTimeStamp: int
+
+    def model_dump(self) -> Dict[str, Any]:
+        return self.dict(exclude_none=True)
+
+
+class LyricSyllable(BaseModel):
+    pass  # Currently empty based on sample response
+
+
+class LyricLine(BaseModel):
+    startTimeMs: str
+    words: str
+    syllables: List[LyricSyllable] = []
+    endTimeMs: str
+
+
+class LyricsProvider(BaseModel):
+    syncType: str
+    lines: List[LyricLine]
+    provider: str
+    providerLyricsId: str
+    providerDisplayName: str
+    syncLyricsUri: str
+    isDenseTypeface: bool
+    alternatives: List[Any] = []
+    language: str
+    isRtlLanguage: bool
+    capStatus: str
+    previewLines: List[LyricLine]
+
+
+class LyricsColors(BaseModel):
+    background: int
+    text: int
+    highlightText: int
+
+
+class TrackLyricsResponse(BaseModel):
+    lyrics: LyricsProvider
+    colors: LyricsColors
+    hasVocalRemoval: bool
+
+    def model_dump(self) -> Dict[str, Any]:
+        return self.dict(exclude_none=True)

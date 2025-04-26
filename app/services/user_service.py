@@ -1,6 +1,6 @@
 from bson import ObjectId
 from db.mongo import users_collection
-from models.user import User, UserCreate, UserUpdate
+from models.user import User, UserCreate, UserUpdate, UserRole
 from core import security
 from datetime import datetime
 from typing import Optional, Dict, Any
@@ -29,7 +29,8 @@ async def get_user_by_username(username: str) -> Optional[User]:
     user = await users_collection.find_one({"username": username})
     if user:
         user["_id"] = str(user["_id"])
-    return User(**user)
+        return User(**user)
+    return None
 
 
 async def create_user(user_data: UserCreate) -> User:
@@ -42,9 +43,10 @@ async def create_user(user_data: UserCreate) -> User:
         hashed_password=hashed_password,
         created_at=datetime.now(),
         updated_at=datetime.now(),
+        role=UserRole.user,
     )
 
-    result = await users_collection.insert_one(user.model_dump())
+    result = await users_collection.insert_one(user)
     created_user = await users_collection.find_one({"_id": result.inserted_id})
     created_user["_id"] = str(created_user["_id"])
     created_user["is_new"] = True
@@ -63,10 +65,9 @@ async def authenticate_user(username: str, password: str) -> Optional[User]:
 
 async def update_user_by_id(user_id: ObjectId, user_data: UserUpdate) -> Optional[User]:
     user = await users_collection.find_one({"_id": user_id})
-    logger.info(f"user: {user}")
     if not user:
         return None
-    for key, value in user_data.model_dump().items():
+    for key, value in user_data:
         if value is not None:
             user[key] = value
     user["updated_at"] = datetime.now()

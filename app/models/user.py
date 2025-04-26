@@ -25,6 +25,18 @@ class User(BaseModel):
     is_new: bool = False
     role: Optional[UserRole] = None
 
+    def model_dump(self):
+        """Convert model to dictionary, excluding None values."""
+        data = {
+            key: value
+            for key, value in self.__dict__.items()
+            if value is not None and not key.startswith("_")
+        }
+        # Convert _id to string if it exists
+        if hasattr(self, "_id") and self._id is not None:
+            data["_id"] = str(self._id)
+        return data
+
 
 class UserCreate(BaseModel):
     username: str

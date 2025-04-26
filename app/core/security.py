@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta
+
+import bcrypt
 from core.config import logger
 from jose import jwt, JWTError
 from core import config
 from passlib.context import CryptContext
 from typing import Optional, List
+import base64
 
 # Password context for hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -29,9 +32,13 @@ def decode_access_token(token: str) -> Optional[dict]:
         return None
 
 
-def verify_hashed_code(plain_code, hashed_code):
-    return pwd_context.verify(plain_code, hashed_code)
+def get_hash_code(code: str) -> str:
+    """Securely hash a code using bcrypt."""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(code.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
 
 
-def get_hash_code(code: str):
-    return pwd_context.hash(code)
+def verify_hashed_code(code: str, hashed: str) -> bool:
+    """Verify a bcrypt hashed code."""
+    return bcrypt.checkpw(code.encode("utf-8"), hashed.encode("utf-8"))

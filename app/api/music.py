@@ -1,6 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from models.tracks import Country, Period, TrackSearch, TopTrendingTracks
-from services.music_service import search_music_handler, top_trending_tracks_handler
+from services.music_service import (
+    search_music_handler,
+    top_trending_tracks_handler,
+    download_music_handler,
+    get_track_lyrics_handler,
+)
 from models.user import UserRole
 from api.deps import validate_role
 
@@ -19,11 +24,15 @@ async def get_music():
 # Search for music
 @router.get(
     "/search",
-    dependencies=[
-        Depends(validate_role([UserRole.admin, UserRole.user, UserRole.artist]))
-    ],
+    # dependencies=[
+    #     Depends(validate_role([UserRole.admin, UserRole.user, UserRole.artist]))
+    # ],
 )
-async def search_music(query: str = Query(..., description="Search query"), limit: int = Query(10, description="Limit of results"), offset: int = Query(0, description="Offset of results")):
+async def search_music(
+    query: str = Query(..., description="Search query"),
+    limit: int = Query(10, description="Limit of results"),
+    offset: int = Query(0, description="Offset of results"),
+):
     if not query.strip():
         raise HTTPException(status_code=400, detail="Query is required")
 
@@ -38,9 +47,28 @@ async def search_music(query: str = Query(..., description="Search query"), limi
         Depends(validate_role([UserRole.admin, UserRole.user, UserRole.artist]))
     ],
 )
-async def top_trending_tracks(country: Country = Query(..., description="Country"), period: Period = Query(..., description="Period")):
+async def top_trending_tracks(
+    country: Country = Query(..., description="Country"),
+    period: Period = Query(..., description="Period"),
+):
     if not country.strip():
         raise HTTPException(status_code=400, detail="Country is required")
 
     data = TopTrendingTracks(country=country, period=period)
     return await top_trending_tracks_handler(data)
+
+
+# Download music by id
+@router.get(
+    "/download/{id}",
+)
+async def download_music(id: str):
+    return await download_music_handler(id)
+
+
+# Get track lyrics by id
+@router.get(
+    "/lyrics/{id}",
+)
+async def get_track_lyrics(id: str):
+    return await get_track_lyrics_handler(id)
