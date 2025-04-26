@@ -29,3 +29,10 @@ email-validator==2.0.0
 
 # Email
 aiosmtplib==2.0.1
+
+
+# Transformers
+sentence-transformers==4.1.0
+librosa==0.11.0
+numpy==2.0.2
+hf-xet==1.0.5

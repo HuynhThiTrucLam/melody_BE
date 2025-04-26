@@ -1,6 +1,9 @@
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from models.tracks import Country, Period, TrackSearch, TopTrendingTracks
 from services.music_service import (
+    find_similar_songs,
+    find_similar_songs_atlas,
     search_music_handler,
     top_trending_tracks_handler,
     download_music_handler,
@@ -72,3 +75,29 @@ async def download_music(id: str):
 )
 async def get_track_lyrics(id: str):
     return await get_track_lyrics_handler(id)
+
+
+@router.get("/similar-songs/{song_id}")
+async def get_similar_songs(
+    song_id: str, n: Optional[int] = Query(5, ge=1, le=50), genre: Optional[str] = None
+):
+    """Find similar songs to the given song ID"""
+    # Prepare filter criteria
+    filter_criteria = {}
+    if genre:
+        filter_criteria["genre"] = genre
+
+    # Use MongoDB Atlas vector search if available
+    try:
+        similar_songs = await find_similar_songs_atlas(song_id, n, filter_criteria)
+    except Exception as e:
+        # Fall back to custom implementation
+        similar_songs = await find_similar_songs(song_id, n, filter_criteria)
+
+    if not similar_songs:
+        raise HTTPException(
+            status_code=404,
+            detail="No similar songs found or source song not available",
+        )
+
+    return similar_songs
