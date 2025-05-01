@@ -60,8 +60,6 @@ temp/
 .env.production
 
 # Docker
-Dockerfile
-docker-compose.yml
 .dockerignore
 
 # Documentation

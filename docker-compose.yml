@@ -1,0 +1,61 @@
+services:
+  api:
+    build: .
+    container_name: melody_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - media-data:/app/media
+    environment:
+      - MONGO_URI=mongodb://admin:password@mongo:27017/melody_db?authSource=admin
+      - MONGO_DB=melody_db
+      - SECRET_KEY=${SECRET_KEY:-your_secret_key_here}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-your_google_client_id_here}
+      - RAPID_API_KEY=${RAPID_API_KEY:-your_rapid_api_key_here}
+      - RAPID_API_HOST=${RAPID_API_HOST:-your_rapid_api_host_here}
+      - RAPID_API_URL=${RAPID_API_URL:-your_rapid_api_url_here}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - melody-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  mongo:
+    image: mongo:6.0
+    container_name: melody_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    environment:
+      - MONGO_INITDB_DATABASE=melody_db
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-password}
+    restart: unless-stopped
+    networks:
+      - melody-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/melody_db --quiet
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mongo-data:
+    driver: local
+  media-data:
+    driver: local
+
+networks:
+  melody-network:
+    driver: bridge 
