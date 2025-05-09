@@ -42,8 +42,8 @@ class UserCreate(BaseModel):
     username: str
     password: str
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
-    name: Optional[str] = None
+    # phone: Optional[str] = None
+    # name: Optional[str] = None
 
 
 class UserLogin(BaseModel):

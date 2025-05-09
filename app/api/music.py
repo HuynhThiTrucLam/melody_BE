@@ -5,7 +5,8 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks, B
 from fastapi.responses import StreamingResponse
 import httpx
 from pydantic import BaseModel
-from models.tracks import Country, Period, TrackSearch, TopTrendingTracks
+from models.tracks import Country, MusicTrack, Period, TrackSearch, TopTrendingTracks
+
 from services.music_service import (
     find_similar_songs,
     find_similar_songs_atlas,
@@ -15,6 +16,8 @@ from services.music_service import (
     get_track_lyrics_handler,
     get_popular_songs_handler,
     get_popular_songs_from_api,
+    get_music_infor_by_id,
+    get_music_detail_by_id,
 )
 from models.user import UserRole
 from api.deps import validate_role
@@ -55,6 +58,19 @@ async def search_music(
     data = TrackSearch(query=query, limit=limit, offset=offset)
     return await search_music_handler(data)
 
+# Get music infor by id
+@router.get(
+    "/get-infor/{id}",
+)
+async def get_music_infor(id: str) :
+    return await get_music_infor_by_id(id)
+
+# Get music detail by id
+@router.get(
+    "/get-detail/{id}",
+)
+async def get_music_detail(id: str) -> MusicTrack:
+    return await get_music_detail_by_id(id)
 
 # Top 200 tracks
 @router.get(

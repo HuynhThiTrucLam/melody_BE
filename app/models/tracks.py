@@ -2,7 +2,7 @@ from enum import Enum
 from pydantic import BaseModel
 from typing import List, Optional, Any, Dict
 from .albums import Album, Artists
-from datetime import date
+from datetime import date, datetime
 
 
 class ContentRating(BaseModel):
@@ -206,3 +206,30 @@ class PopularSongsResponse(BaseModel):
 
     def model_dump(self) -> Dict[str, Any]:
         return self.dict(exclude_none=True)
+
+
+class MusicTrack(BaseModel):
+    """Music track model with all fields required for the frontend."""
+
+    id: str
+    name: str
+    artist: List[str]
+    albumArt: str
+    audioUrl: str  # URL or asset path for the audio file
+    lyrics: TrackLyricsResponse
+    duration: int  # Duration in milliseconds
+    listener: int
+    releaseDate: Optional[str] = None
+    nation: Optional[str] = None
+
+    class Config:
+        orm_mode = True  # This allows the model to work with ORM objects
+
+
+class MusicTrackListResponse(BaseModel):
+    """Response model containing a list of music tracks."""
+
+    success: bool = True
+    data: list[MusicTrack]
+    total: int
+    message: Optional[str] = None
