@@ -38,6 +38,16 @@ class User(BaseModel):
         return data
 
 
+class UserResponse(BaseModel):
+    id: Optional[str] = None
+    username: str
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class UserCreate(BaseModel):
     username: str
     password: str
