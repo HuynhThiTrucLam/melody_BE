@@ -1,11 +1,10 @@
-
-
 from fastapi import APIRouter
 from app.services import playlist as playlist_service
 from app.models.playlist import PlaylistCreate, Playlist, PlaylistUpdate
 
 
 router = APIRouter()
+
 
 @router.post("/create", response_model=Playlist)
 async def create_playlist(playlist: PlaylistCreate):

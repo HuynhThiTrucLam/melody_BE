@@ -6,6 +6,7 @@ from api import auth
 from api import music
 from api import health
 from api import playlist
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,

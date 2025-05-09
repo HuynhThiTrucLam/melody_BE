@@ -35,7 +35,12 @@ class TrackItem(BaseModel):
         return self.dict(exclude_none=True)
 
     def get_image(self):
-        if self.data and self.data.albumOfTrack and self.data.albumOfTrack.coverArt and self.data.albumOfTrack.coverArt.sources:
+        if (
+            self.data
+            and self.data.albumOfTrack
+            and self.data.albumOfTrack.coverArt
+            and self.data.albumOfTrack.coverArt.sources
+        ):
             return self.data.albumOfTrack.coverArt.sources[0].url
         return None
 
