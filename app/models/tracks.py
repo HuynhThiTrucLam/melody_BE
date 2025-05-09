@@ -31,6 +31,9 @@ class Track(BaseModel):
 class TrackItem(BaseModel):
     data: Optional[Track] = None  # Sometimes data can be empty list or null
 
+    def model_dump(self) -> Dict[str, Any]:
+        return self.dict(exclude_none=True)
+
 
 class PagingInfo(BaseModel):
     nextOffset: int
@@ -63,77 +66,8 @@ class Period(str, Enum):
 
 class Country(str, Enum):
     GLOBAL = "GLOBAL"
-    AR = "AR"
-    AU = "AU"
-    AT = "AT"
-    BY = "BY"
-    BE = "BE"
-    BO = "BO"
-    BR = "BR"
-    BG = "BG"
-    CA = "CA"
-    CL = "CL"
-    CO = "CO"
-    CR = "CR"
-    CY = "CY"
-    CZ = "CZ"
-    DK = "DK"
-    DO = "DO"
-    EC = "EC"
-    EE = "EE"
-    EG = "EG"
-    SV = "SV"
-    FI = "FI"
-    FR = "FR"
-    DE = "DE"
-    GR = "GR"
-    GT = "GT"
-    HN = "HN"
-    HK = "HK"
-    HU = "HU"
-    IS = "IS"
-    IN = "IN"
-    ID = "ID"
-    IE = "IE"
-    IL = "IL"
-    JP = "JP"
-    KZ = "KZ"
-    LV = "LV"
-    LT = "LT"
-    LU = "LU"
-    MY = "MY"
-    MX = "MX"
-    MA = "MA"
-    NL = "NL"
-    NZ = "NZ"
-    NI = "NI"
-    NG = "NG"
-    NO = "NO"
-    PK = "PK"
-    PA = "PA"
-    PY = "PY"
-    PE = "PE"
-    PH = "PH"
-    PL = "PL"
-    PT = "PT"
-    RO = "RO"
-    SA = "SA"
-    SG = "SG"
-    SK = "SK"
-    ZA = "ZA"
+    USUK = "USUK"
     KR = "KR"
-    ES = "ES"
-    SE = "SE"
-    CH = "CH"
-    TW = "TW"
-    TH = "TH"
-    TR = "TR"
-    AE = "AE"
-    UA = "UA"
-    GB = "GB"
-    UY = "UY"
-    US = "US"
-    VE = "VE"
     VN = "VN"
 
 
@@ -198,19 +132,19 @@ class TrendingTracksResponse(BaseModel):
 
 
 class DownloadTrackData(BaseModel):
-    id: str
-    artist: str
-    title: str
-    album: str
-    cover: str
-    releaseDate: str
-    downloadLink: str
+    id: Optional[str] = None
+    artist: Optional[str] = None
+    title: Optional[str] = None
+    album: Optional[str] = None
+    cover: Optional[str] = None
+    releaseDate: Optional[str] = None
+    downloadLink: Optional[str] = None
 
 
 class DownloadTrackResponse(BaseModel):
-    success: bool
-    data: DownloadTrackData
-    generatedTimeStamp: int
+    success: Optional[bool] = None
+    data: Optional[DownloadTrackData] = None
+    generatedTimeStamp: Optional[int] = None
 
     def model_dump(self) -> Dict[str, Any]:
         return self.dict(exclude_none=True)
@@ -252,6 +186,23 @@ class TrackLyricsResponse(BaseModel):
     lyrics: LyricsProvider
     colors: LyricsColors
     hasVocalRemoval: bool
+
+    def model_dump(self) -> Dict[str, Any]:
+        return self.dict(exclude_none=True)
+
+
+class PopularSong(BaseModel):
+    title: str
+    artist: str
+    genre: str
+    year: str
+
+    def model_dump(self) -> Dict[str, Any]:
+        return self.dict(exclude_none=True)
+
+
+class PopularSongsResponse(BaseModel):
+    data: List[PopularSong]
 
     def model_dump(self) -> Dict[str, Any]:
         return self.dict(exclude_none=True)

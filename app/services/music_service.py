@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import http
 import numpy as np
 import requests
 import json
@@ -13,6 +14,7 @@ from core.config import (
     RAPID_API_DOWNLOAD_URL,
 )
 from models.tracks import (
+    PopularSongsResponse,
     TrackList,
     TrackSearch,
     TopTrendingTracks,
@@ -20,8 +22,11 @@ from models.tracks import (
     TrendingTracksResponse,
     DownloadTrackResponse,
     TrackLyricsResponse,
+    Country,
 )
 from db.mongo import search_history_collection, tracks_collection
+import asyncio
+import os
 
 
 async def search_music_handler(data: TrackSearch):
@@ -301,7 +306,14 @@ async def find_similar_songs(song_id, n=5, filter_criteria=None):
     # Fetch all potential matching songs (this can be optimized with larger datasets)
     cursor = tracks_collection.find(
         query,
-        {"_id": 1, "name": 1, "artists": 1, "albumOfTrack": 1, "genre": 1, "embedding": 1},
+        {
+            "_id": 1,
+            "name": 1,
+            "artists": 1,
+            "albumOfTrack": 1,
+            "genre": 1,
+            "embedding": 1,
+        },
     )
     potential_matches = await cursor.to_list(length=100)  # Limit to 100 for performance
 
@@ -322,3 +334,169 @@ async def find_similar_songs(song_id, n=5, filter_criteria=None):
     # Sort by similarity score and return top N
     similar_songs.sort(key=lambda x: x["similarity_score"], reverse=True)
     return similar_songs[:n]
+
+
+async def get_popular_songs_from_api(country: Country):
+    try:
+        # Convert country to lowercase and handle special case
+        country_key = country.lower()
+
+        # Map of available mock files
+        mock_files = {
+            "vn": "popular_vn_songs.json",
+            "global": "popular_global_songs.json",
+            "kr": "porpular_kr_songs.json",  # Note typo in filename
+            "us": "porpular_usuk_songs.json",  # Note typo in filename
+            "gb": "porpular_usuk_songs.json",  # Use same file for GB
+        }
+
+        # Default to global if country not found
+        if country_key not in mock_files:
+            logger.warning(f"No mock data for country {country}, using global")
+            country_key = "global"
+
+        # Use absolute path instead of relative path
+        import os
+
+        base_dir = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+        file_path = os.path.join(base_dir, "mocks", mock_files[country_key])
+
+        # Check if file exists
+        if not os.path.exists(file_path):
+            logger.warning(f"Mock file {file_path} not found, using global")
+            file_path = os.path.join(base_dir, "mocks", "popular_global_songs.json")
+
+            # If global file also doesn't exist, use fallback data
+            if not os.path.exists(file_path):
+                logger.warning(f"Global mock file also not found, using hardcoded data")
+                raise FileNotFoundError("All mock files are missing")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            logger.info(f"Successfully loaded mock data from {file_path}")
+            return PopularSongsResponse(data=data)
+    except Exception as e:
+        logger.error(f"Error getting popular songs: {e}")
+        # Fallback to hardcoded data if all else fails
+        fallback_data = [
+            {
+                "title": "Die With A Smile",
+                "artist": "Lady Gaga, Bruno Mars",
+                "genre": "Pop",
+                "year": "2025",
+            },
+            {
+                "title": "Abracadabra",
+                "artist": "Lady Gaga",
+                "genre": "Pop",
+                "year": "2025",
+            },
+            {
+                "title": "BIRDS OF A FEATHER",
+                "artist": "Billie Eilish",
+                "genre": "Pop",
+                "year": "2025",
+            },
+            {
+                "title": "Timeless",
+                "artist": "The Weeknd",
+                "genre": "R&B",
+                "year": "2025",
+            },
+            {
+                "title": "like JENNIE",
+                "artist": "JENNIE",
+                "genre": "K-pop",
+                "year": "2025",
+            },
+        ]
+        return PopularSongsResponse(data=fallback_data)
+
+
+async def get_popular_songs_handler(country: Country):
+    """Get popular songs from Audius API with improved performance"""
+    try:
+        # Check cache for final results with a more specific key (including timestamp)
+        cache_key = f"popular_songs_{country}"
+        cached_results = await search_history_collection.find_one(
+            {"query": cache_key, "expires_at": {"$gt": datetime.now()}}
+        )
+
+        if cached_results:
+            logger.info(f"Found cached popular songs for {country}")
+            return cached_results["result"]["items"]
+
+        # If not cached, proceed with API calls
+        popular_songs = await get_popular_songs_from_api(country)
+
+        import random
+
+        # Limit to 10 songs to reduce processing time
+        sample_size = min(10, len(popular_songs.data))
+        popular_songs = random.sample(popular_songs.data, sample_size)
+
+        # Use a semaphore to limit concurrent API calls (to avoid rate limiting)
+        semaphore = asyncio.Semaphore(5)  # Maximum 5 concurrent requests
+
+        async def search_with_timeout(song):
+            """Execute search with timeout and semaphore to prevent hanging"""
+            try:
+                async with semaphore:
+                    song_name = song.title
+                    artist_name = song.artist
+                    # Use a timeout to prevent slow API calls
+                    return await asyncio.wait_for(
+                        search_music_handler(
+                            TrackSearch(query=f"{song_name} {artist_name}", limit=1)
+                        ),
+                        timeout=5.0,  # 5 second timeout
+                    )
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout searching for {song.title} by {song.artist}")
+                return None
+            except Exception as e:
+                logger.warning(f"Error searching for {song.title}: {str(e)}")
+                return None
+
+        # Create and execute search tasks with better error handling
+        search_tasks = [search_with_timeout(song) for song in popular_songs]
+        search_results = await asyncio.gather(*search_tasks)
+
+        # Process results
+        result = []
+        serializable_result = []
+
+        for i, track_data in enumerate(search_results):
+            if (
+                not track_data
+                or not hasattr(track_data, "items")
+                or not track_data.items
+            ):
+                # Skip invalid results
+                result.append(None)
+                serializable_result.append(None)
+                continue
+
+            track_item = track_data.items[0]
+            result.append(track_item)
+            serializable_result.append(track_item.model_dump())
+
+        # Cache the final results with a reasonable expiration time
+        await search_history_collection.update_one(
+            {"query": cache_key},
+            {
+                "$set": {
+                    "result": {"items": serializable_result},
+                    "expires_at": datetime.now()
+                    + timedelta(hours=24),  # Increase cache time
+                }
+            },
+            upsert=True,
+        )
+
+        return result
+    except Exception as e:
+        logger.error(f"Error getting popular songs: {e}")
+        raise e

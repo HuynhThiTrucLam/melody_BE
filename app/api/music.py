@@ -1,5 +1,10 @@
+import mimetypes
+import os
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks, Body, Request
+from fastapi.responses import StreamingResponse
+import httpx
+from pydantic import BaseModel
 from models.tracks import Country, Period, TrackSearch, TopTrendingTracks
 from services.music_service import (
     find_similar_songs,
@@ -8,9 +13,17 @@ from services.music_service import (
     top_trending_tracks_handler,
     download_music_handler,
     get_track_lyrics_handler,
+    get_popular_songs_handler,
+    get_popular_songs_from_api,
 )
 from models.user import UserRole
 from api.deps import validate_role
+from datetime import datetime
+from db.mongo import search_history_collection
+from core.config import logger
+import time
+import hashlib
+from pathlib import Path
 
 
 router = APIRouter(tags=["music"], prefix="/music")
@@ -101,3 +114,11 @@ async def get_similar_songs(
         )
 
     return similar_songs
+
+
+@router.get("/popular-songs")
+async def get_popular_songs(
+    country: Country = Query(..., description="Country"),
+):
+    """Get popular songs with optional background processing"""
+    return await get_popular_songs_handler(country)
