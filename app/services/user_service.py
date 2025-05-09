@@ -32,6 +32,13 @@ async def get_user_by_username(username: str) -> Optional[User]:
         return User(**user)
     return None
 
+# Get user by email
+async def get_user_by_email(email: str) -> Optional[User]:
+    user = await users_collection.find_one({"email": email})
+    if user:
+        user["_id"] = str(user["_id"])
+        return User(**user)
+    return None
 
 async def create_user(user_data: UserCreate) -> User:
     hashed_password = security.get_hash_code(user_data.password)
@@ -39,14 +46,15 @@ async def create_user(user_data: UserCreate) -> User:
     user = User(
         username=user_data.username,
         email=user_data.email,
-        name=user_data.name,
+        name=None,
         hashed_password=hashed_password,
         created_at=datetime.now(),
         updated_at=datetime.now(),
         role=UserRole.user,
     )
 
-    result = await users_collection.insert_one(user)
+    # result = await users_collection.insert_one(user)
+    result = await users_collection.insert_one(user.model_dump())
     created_user = await users_collection.find_one({"_id": result.inserted_id})
     created_user["_id"] = str(created_user["_id"])
     created_user["is_new"] = True
