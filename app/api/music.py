@@ -1,7 +1,15 @@
 import mimetypes
 import os
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks, Body, Request
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Depends,
+    Query,
+    BackgroundTasks,
+    Body,
+    Request,
+)
 from fastapi.responses import StreamingResponse
 import httpx
 from pydantic import BaseModel
@@ -58,12 +66,14 @@ async def search_music(
     data = TrackSearch(query=query, limit=limit, offset=offset)
     return await search_music_handler(data)
 
+
 # Get music infor by id
 @router.get(
     "/get-infor/{id}",
 )
-async def get_music_infor(id: str) :
+async def get_music_infor(id: str):
     return await get_music_infor_by_id(id)
+
 
 # Get music detail by id
 @router.get(
@@ -71,6 +81,7 @@ async def get_music_infor(id: str) :
 )
 async def get_music_detail(id: str) -> MusicTrack:
     return await get_music_detail_by_id(id)
+
 
 # Top 200 tracks
 @router.get(

@@ -32,6 +32,7 @@ async def get_user_by_username(username: str) -> Optional[User]:
         return User(**user)
     return None
 
+
 # Get user by email
 async def get_user_by_email(email: str) -> Optional[User]:
     user = await users_collection.find_one({"email": email})
@@ -39,6 +40,7 @@ async def get_user_by_email(email: str) -> Optional[User]:
         user["_id"] = str(user["_id"])
         return User(**user)
     return None
+
 
 async def create_user(user_data: UserCreate) -> User:
     hashed_password = security.get_hash_code(user_data.password)

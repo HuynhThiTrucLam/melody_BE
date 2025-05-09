@@ -153,12 +153,12 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
         info_key = f"track_infor_{id}"
         lyrics_key = f"lyrics_{id}"
         download_key = f"download_{id}"
-        
+
         # Initialize variables to store results
         track_info = None
         lyrics_data = None
         download_data = None
-        
+
         # Check cache for each endpoint
         info_cache = await search_history_collection.find_one(
             {"query": info_key, "expires_at": {"$gt": datetime.now()}}
@@ -169,7 +169,7 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
         download_cache = await search_history_collection.find_one(
             {"query": download_key, "expires_at": {"$gt": datetime.now()}}
         )
-        
+
         # Get track info
         if info_cache:
             logger.info(f"Using cached track info for track ID: {id}")
@@ -179,10 +179,12 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
             track_info = await get_music_infor_by_id(id)
             if not track_info:
                 raise Exception(f"Failed to retrieve track info for ID: {id}")
-        
+
         # Debug log to see actual structure
-        logger.debug(f"Track info structure: {json.dumps(track_info, default=str)[:500]}...")
-       
+        logger.debug(
+            f"Track info structure: {json.dumps(track_info, default=str)[:500]}..."
+        )
+
         # Get lyrics data
         if lyrics_cache:
             logger.info(f"Using cached lyrics for track ID: {id}")
@@ -207,16 +209,12 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
                         "language": "",
                         "isRtlLanguage": False,
                         "capStatus": "",
-                        "previewLines": []
+                        "previewLines": [],
                     },
-                    colors={
-                        "background": 0,
-                        "text": 0,
-                        "highlightText": 0
-                    },
-                    hasVocalRemoval=False
+                    colors={"background": 0, "text": 0, "highlightText": 0},
+                    hasVocalRemoval=False,
                 )
-   
+
         # Get download data
         if download_cache:
             logger.info(f"Using cached download data for track ID: {id}")
@@ -230,27 +228,39 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
             except Exception as e:
                 logger.warning(f"Failed to get download URL for track {id}: {e}")
                 raise Exception(f"Unable to get download information for track: {e}")
-        
+
         # Construct the MusicTrack object
         try:
             # Extract track ID - handle different possible structures
             track_id = id  # Default to the input ID
             if isinstance(track_info, dict):
-                if "track" in track_info and isinstance(track_info["track"], dict) and "id" in track_info["track"]:
+                if (
+                    "track" in track_info
+                    and isinstance(track_info["track"], dict)
+                    and "id" in track_info["track"]
+                ):
                     track_id = track_info["track"]["id"]
                 elif "id" in track_info:
                     track_id = track_info["id"]
-            
+
             # Extract duration - handle different possible structures
             duration = 0  # Default duration
             if isinstance(track_info, dict):
                 # Debug log to understand the structure
-                logger.debug(f"Extracting duration from track_info keys: {list(track_info.keys())}")
-                
+                logger.debug(
+                    f"Extracting duration from track_info keys: {list(track_info.keys())}"
+                )
+
                 # Handle Spotify API response format with tracks array
-                if "tracks" in track_info and isinstance(track_info["tracks"], list) and len(track_info["tracks"]) > 0:
+                if (
+                    "tracks" in track_info
+                    and isinstance(track_info["tracks"], list)
+                    and len(track_info["tracks"]) > 0
+                ):
                     track = track_info["tracks"][0]  # Get first track in array
-                    logger.debug(f"Found track in tracks array with keys: {list(track.keys())}")
+                    logger.debug(
+                        f"Found track in tracks array with keys: {list(track.keys())}"
+                    )
                     if "duration_ms" in track:
                         duration = track["duration_ms"]
                         logger.debug(f"Found duration_ms in tracks array: {duration}")
@@ -258,27 +268,34 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
                 elif "track" in track_info and isinstance(track_info["track"], dict):
                     track_obj = track_info["track"]
                     logger.debug(f"Track object keys: {list(track_obj.keys())}")
-                    
+
                     if "duration_ms" in track_obj:
                         duration = track_obj["duration_ms"]
                     elif "duration" in track_obj:
                         duration = track_obj["duration"]
                     # Check for nested duration object
-                    elif "duration" in track_obj and isinstance(track_obj["duration"], dict) and "totalMilliseconds" in track_obj["duration"]:
+                    elif (
+                        "duration" in track_obj
+                        and isinstance(track_obj["duration"], dict)
+                        and "totalMilliseconds" in track_obj["duration"]
+                    ):
                         duration = track_obj["duration"]["totalMilliseconds"]
-                
+
                 # Check for duration in root object
                 elif "duration_ms" in track_info:
                     duration = track_info["duration_ms"]
                 elif "duration" in track_info:
                     # Check if duration is a dictionary or a direct value
-                    if isinstance(track_info["duration"], dict) and "totalMilliseconds" in track_info["duration"]:
+                    if (
+                        isinstance(track_info["duration"], dict)
+                        and "totalMilliseconds" in track_info["duration"]
+                    ):
                         duration = track_info["duration"]["totalMilliseconds"]
                     else:
                         duration = track_info["duration"]
-            
+
             logger.info(f"Extracted duration: {duration}")
-            
+
             # Handle both dictionary and DownloadTrackResponse object
             if isinstance(download_data, dict):
                 title = download_data["data"]["title"]
@@ -292,7 +309,7 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
                 cover = download_data.data.cover
                 download_link = download_data.data.downloadLink
                 release_date = download_data.data.releaseDate
-            
+
             result = MusicTrack(
                 id=track_id,
                 name=title,
@@ -303,13 +320,13 @@ async def get_music_detail_by_id(id: str) -> MusicTrack:
                 duration=duration,
                 listener=0,
                 releaseDate=release_date,
-                nation=None
+                nation=None,
             )
             return result
         except KeyError as e:
             logger.error(f"Missing required field in data: {e}")
             raise Exception(f"Data missing required field: {e}")
-        
+
     except Exception as e:
         logger.error(f"Error getting comprehensive music details: {e}")
         raise e
@@ -330,16 +347,16 @@ async def get_music_infor_by_id(id: str):
         # Make API request if not cached
         url = f"{RAPID_API_URL}/tracks"
         querystring = {"ids": id}
-        
+
         headers = {
             "x-rapidapi-key": RAPID_API_KEY,
             "x-rapidapi-host": RAPID_API_HOST,
         }
-        
+
         response = requests.get(url, headers=headers, params=querystring)
         response.raise_for_status()
         result = response.json()
-        
+
         # Save to cache
         await search_history_collection.update_one(
             {"query": query_key},
@@ -351,7 +368,7 @@ async def get_music_infor_by_id(id: str):
             },
             upsert=True,
         )
-        
+
         return result
     except Exception as e:
         logger.error(f"Error getting music detail by id: {e}")
